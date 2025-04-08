@@ -17,7 +17,6 @@ public class PlayerController : MonoBehaviour
     [Header("Jumping")]
     [SerializeField] private float jumpSpeed = 5.0f;
     [SerializeField] private float jumpButtonGracePeriod = 0.2f;
-    //[SerializeField] private float gravityMultiplier = 2.0f;
     [SerializeField] private float coyoteTime = 0.2f;
     private float _ySpeed;
     private float? _lastGroundedTime;
@@ -31,12 +30,12 @@ public class PlayerController : MonoBehaviour
     
     private void Awake()
     {
+        // Кэшируем ссылки на компоненты и подписываемся на событие прыжка
         _playerInputController = GetComponent<PlayerInputController>();
         _characterController = GetComponent<CharacterController>();
         _originalStepOffset = _characterController.stepOffset;
 
         _playerInputController.OnJumpButtonPressed += JumpButtonPressed;
-        //_playerInputController.OnRunButtonPressed += HandleRunStateChanged;
     }
 
     private void Start()
@@ -53,15 +52,18 @@ public class PlayerController : MonoBehaviour
 
     private void Update()
     {
+        // Получаем вектор движения от пользовательского ввода
         Vector2 input = _playerInputController.MovementInputVector;
         _isRunningInput = _playerInputController.IsRunning;
         
         Vector3 movement = Vector3.zero;
         
+        // Проверяем, есть ли движение — это убережёт от дрожания и ложных срабатываний
         bool hasMove = input.magnitude >= 0.1f;
 
         if (hasMove)
         {
+            // Преобразуем вектор движения в мировые координаты на основе направления камеры
             Vector3 cameraForward = Vector3.Scale(_cameraTransform.forward, new Vector3(1, 0, 1)).normalized;
             Vector3 cameraRight = Vector3.Scale(_cameraTransform.right, new Vector3(1, 0, 1)).normalized;
             
@@ -74,6 +76,7 @@ public class PlayerController : MonoBehaviour
             // Это предотвращает разворот на 180 градусов при движении строго назад.
             if (input.y > -0.5f || Mathf.Abs(input.x) > 0.1f) 
             {
+                // Плавно поворачиваем персонажа к направлению движения (если он не пятится)
                 float targetAngle = Mathf.Atan2(movement.x, movement.z) * Mathf.Rad2Deg;
                 float angle = Mathf.SmoothDampAngle(transform.eulerAngles.y, targetAngle, ref _turnSmoothVelocity, turnSmoothTime);
                 transform.rotation = Quaternion.Euler(0f, angle, 0f);
@@ -83,7 +86,7 @@ public class PlayerController : MonoBehaviour
             // сохраняя текущее направление взгляда (или последнее направление).
         }
         
-        float currentSpeed = _isRunningInput ? runSpeed : speed;
+        float currentSpeed = _isRunningInput ? runSpeed : speed; // меняем скорость если персонаж бежит
         Vector3 horizontalVelocity = movement * currentSpeed;
         
         bool isGrounded = CheckGrounded();
@@ -114,7 +117,7 @@ public class PlayerController : MonoBehaviour
         }
         
         Vector3 velocity = horizontalVelocity;
-        velocity.y = _ySpeed;
+        velocity.y = _ySpeed; // учитываем прыжок в итоговой скорости
         _characterController.Move(velocity * Time.deltaTime);
         
         
@@ -133,7 +136,14 @@ public class PlayerController : MonoBehaviour
 
     private bool CheckGrounded()
     {
-        Vector3 spherePosition = transform.position + _characterController.center + Vector3.down * (_characterController.height / 2f - _characterController.radius + 0.1f);
+        // Вычисление позиции сферы для проверки земли:
+        // Начальная точка — это позиция персонажа, с добавлением смещения центра капсулы (_characterController.center).
+        // Дальше смещаем точку вниз, с учётом половины высоты капсулы и радиуса (чтобы сфера была на уровне основания).
+        // Маленькое смещение groundCheckDistance гарантирует, что сфера точно ниже основания капсулы, а не на нём.
+        Vector3 spherePosition = transform.position + _characterController.center + Vector3.down * (_characterController.height / 2f - _characterController.radius + groundCheckDistance);
+        // Проверка с использованием Physics.CheckSphere:
+        // Проверяется пересечение сферы, созданной у основания персонажа, с объектами на слое "земля" (_groundLayer).
+        // Если пересечение найдено, возвращаем true (персонаж на земле), иначе false (в воздухе).
         return Physics.CheckSphere(spherePosition, _characterController.radius, groundLayer, QueryTriggerInteraction.Ignore);
     }
     private void OnDrawGizmosSelected()
