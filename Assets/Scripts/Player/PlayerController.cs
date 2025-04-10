@@ -6,11 +6,13 @@ public class PlayerController : MonoBehaviour
     private PlayerInputController _playerInputController;
     private CharacterController _characterController;
     private Transform _cameraTransform;
+    private Animator _animator;
 
     [Header("Movement")]
     [SerializeField] private float speed = 5.0f;
     [SerializeField] private float runSpeed = 8.0f;
     [SerializeField] private float turnSmoothTime = 0.2f;
+    [SerializeField] private float speedSmoothTime = 0.1f;
     private float _turnSmoothVelocity;
     private bool _isRunningInput = false;
     
@@ -33,6 +35,7 @@ public class PlayerController : MonoBehaviour
         // Кэшируем ссылки на компоненты и подписываемся на событие прыжка
         _playerInputController = GetComponent<PlayerInputController>();
         _characterController = GetComponent<CharacterController>();
+        _animator = GetComponent<Animator>();
         _originalStepOffset = _characterController.stepOffset;
 
         _playerInputController.OnJumpButtonPressed += JumpButtonPressed;
@@ -60,7 +63,8 @@ public class PlayerController : MonoBehaviour
         
         // Проверяем, есть ли движение — это убережёт от дрожания и ложных срабатываний
         bool hasMove = input.magnitude >= 0.1f;
-
+        _animator.SetBool("IsMoving", hasMove);
+        
         if (hasMove)
         {
             // Преобразуем вектор движения в мировые координаты на основе направления камеры
@@ -89,6 +93,9 @@ public class PlayerController : MonoBehaviour
         float currentSpeed = _isRunningInput ? runSpeed : speed; // меняем скорость если персонаж бежит
         Vector3 horizontalVelocity = movement * currentSpeed;
         
+        float animationSpeedPercent = (_isRunningInput ? 1f : 0.5f) * movement.magnitude;
+        _animator.SetFloat("Speed", animationSpeedPercent, speedSmoothTime, Time.deltaTime); // плавные переходы между анимациями
+        
         bool isGrounded = CheckGrounded();
 
         if (isGrounded)
@@ -116,9 +123,10 @@ public class PlayerController : MonoBehaviour
             _lastGroundedTime = null;
         }
         
-        Vector3 velocity = horizontalVelocity;
-        velocity.y = _ySpeed; // учитываем прыжок в итоговой скорости
-        _characterController.Move(velocity * Time.deltaTime);
+        // до root motion анимации
+        // Vector3 velocity = horizontalVelocity;
+        // velocity.y = _ySpeed; // учитываем прыжок в итоговой скорости
+        // _characterController.Move(velocity * Time.deltaTime);
         
         
         Debug.Log($"Current speed: {currentSpeed}");
@@ -126,6 +134,14 @@ public class PlayerController : MonoBehaviour
         {
             Debug.Log("Прыжок сработал! _ySpeed: " + _ySpeed);
         }
+    }
+
+    private void OnAnimatorMove()
+    {
+        // учитываем перемещение заложенное в анимации
+        Vector3 velocity = _animator.deltaPosition;
+        velocity.y = _ySpeed * Time.deltaTime;
+        _characterController.Move(velocity);
     }
 
     private void JumpButtonPressed()
@@ -148,7 +164,6 @@ public class PlayerController : MonoBehaviour
     }
     private void OnDrawGizmosSelected()
     {
-        // ... (код Gizmos остается тем же) ...
         if (_characterController == null) _characterController = GetComponent<CharacterController>();
         if (_characterController == null) return;
 
