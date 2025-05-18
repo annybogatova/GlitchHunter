@@ -3,7 +3,27 @@ guid: b3a3e463f74450a4684cce68ebb0950d
 ModelImporter:
   serializedVersion: 22200
   internalIDToNameTable: []
-  externalObjects: {}
+  externalObjects:
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: "\u043A\u0435\u0434\u044B"
+    second: {fileID: 2100000, guid: 5ed9786e036c915408ed19d21e3cf69e, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: "\u043D\u043E\u0433\u0438"
+    second: {fileID: 2100000, guid: 4e15ede1182f59b449f9aa1335a699eb, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: "\u0440\u0443\u043A\u0438"
+    second: {fileID: 2100000, guid: 691bb6d6a3dacef43b4f4db4003a26e6, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: "\u0442\u0443\u043B\u043E\u0432\u0438\u0449\u0435"
+    second: {fileID: 2100000, guid: 3dd6c0372a7fbde46b480ca5562fdc60, type: 2}
   materials:
     materialImportMode: 2
     materialName: 0
@@ -102,10 +122,10 @@ ModelImporter:
       hasAdditiveReferencePose: 0
       loopTime: 1
       loopBlend: 1
-      loopBlendOrientation: 0
-      loopBlendPositionY: 0
+      loopBlendOrientation: 1
+      loopBlendPositionY: 1
       loopBlendPositionXZ: 0
-      keepOriginalOrientation: 0
+      keepOriginalOrientation: 1
       keepOriginalPositionY: 1
       keepOriginalPositionXZ: 0
       heightFromFeet: 0
@@ -189,10 +209,10 @@ ModelImporter:
       hasAdditiveReferencePose: 0
       loopTime: 1
       loopBlend: 1
-      loopBlendOrientation: 0
-      loopBlendPositionY: 0
+      loopBlendOrientation: 1
+      loopBlendPositionY: 1
       loopBlendPositionXZ: 0
-      keepOriginalOrientation: 0
+      keepOriginalOrientation: 1
       keepOriginalPositionY: 1
       keepOriginalPositionXZ: 0
       heightFromFeet: 0
