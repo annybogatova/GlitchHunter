@@ -1,0 +1,40 @@
+﻿{
+  "walls": [
+    {
+      "wallName": "wall_1",
+      "slots": [
+        { "slotName": "Slot_1", "inputs": ["Input_1", "Input_2"] },
+        { "slotName": "Slot_2", "inputs": ["Input_3", "Input_4"] },
+        { "slotName": "Slot_3", "inputs": ["Slot_1", "Slot_2"] },
+        { "slotName": "Slot_4", "inputs": ["Input_5", "Input_6"] },
+        { "slotName": "Slot_5", "inputs": ["Slot_3", "Slot_4"] },
+        { "slotName": "Slot_6", "inputs": ["Input_7", "Input_8"] },
+        { "slotName": "Slot_7", "inputs": ["Slot_5", "Slot_6"] }
+      ]
+    },
+    {
+      "wallName": "wall_2",
+      "slots": [
+        { "slotName": "Slot_1", "inputs": ["Input_1", "Input_2"] },
+        { "slotName": "Slot_2", "inputs": ["Input_3", "Input_4"] },
+        { "slotName": "Slot_3", "inputs": ["Slot_1", "Slot_2"] },
+        { "slotName": "Slot_4", "inputs": ["Input_5", "Input_6"] },
+        { "slotName": "Slot_5", "inputs": ["Input_7", "Input_8"] },
+        { "slotName": "Slot_6", "inputs": ["Slot_4", "Slot_5"] },
+        { "slotName": "Slot_7", "inputs": ["Slot_6", "Slot_3"] }
+      ]
+    },
+    {
+      "wallName": "wall_3",
+      "slots": [
+        { "slotName": "Slot_1", "inputs": ["Input_1", "Input_2"] },
+        { "slotName": "Slot_2", "inputs": ["Input_3", "Input_4"] },
+        { "slotName": "Slot_3", "inputs": ["Slot_1", "Slot_2"] },
+        { "slotName": "Slot_4", "inputs": ["Input_5", "Input_6"] },
+        { "slotName": "Slot_5", "inputs": ["Slot_3", "Slot_4"] },
+        { "slotName": "Slot_6", "inputs": ["Input_7", "Input_8"] },
+        { "slotName": "Slot_7", "inputs": ["Slot_5", "Slot_6"] }
+      ]
+    }
+  ]
+}

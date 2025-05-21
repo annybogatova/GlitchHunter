@@ -7,38 +7,8 @@ ModelImporter:
   - first:
       type: UnityEngine:Material
       assembly: UnityEngine.CoreModule
-      name: cells
-    second: {fileID: 2100000, guid: b3759a1c11307b64b8c0be3507319221, type: 2}
-  - first:
-      type: UnityEngine:Material
-      assembly: UnityEngine.CoreModule
       name: floor
     second: {fileID: 2100000, guid: 9691cafd8bcd70f4da2588d27c7056ff, type: 2}
-  - first:
-      type: UnityEngine:Material
-      assembly: UnityEngine.CoreModule
-      name: not
-    second: {fileID: 2100000, guid: bc10ae0ceb3fadb4594bd49c58a83e3a, type: 2}
-  - first:
-      type: UnityEngine:Material
-      assembly: UnityEngine.CoreModule
-      name: roof
-    second: {fileID: 2100000, guid: 8ac40aa598ebdf64598937926c676ad8, type: 2}
-  - first:
-      type: UnityEngine:Material
-      assembly: UnityEngine.CoreModule
-      name: tablo
-    second: {fileID: 2100000, guid: f7f79b6909438c649a0120fdf1575346, type: 2}
-  - first:
-      type: UnityEngine:Material
-      assembly: UnityEngine.CoreModule
-      name: text
-    second: {fileID: 2100000, guid: 43d381a28363060459495fcf2170c1e6, type: 2}
-  - first:
-      type: UnityEngine:Material
-      assembly: UnityEngine.CoreModule
-      name: tube
-    second: {fileID: 2100000, guid: 94b5fe5292d253a43a1e6c9542d19b0c, type: 2}
   - first:
       type: UnityEngine:Material
       assembly: UnityEngine.CoreModule

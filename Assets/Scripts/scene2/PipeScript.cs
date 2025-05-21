@@ -7,18 +7,16 @@ public class PipeScript : MonoBehaviour
     private MaterialPropertyBlock _material;
     private Color _color;
     private bool _lastOutput;
+    private bool _hasGate;
     
     // Start is called once before the first execution of Update after the MonoBehaviour is created
     void Start()
     {
-        Debug.Log("PipeScript start");
-        
         _source = transform.parent.GetComponentInChildren<SlotScript>();
         if (_source == null)
         {
             _source = transform.parent.GetComponentInChildren<InputScript>();
         }
-        Debug.Log("slot founded");
         if (_source == null)
         {
             Debug.LogError("Ни SlotScript, ни InputScript не найдены в родительском объекте " + transform.parent.name);
@@ -67,7 +65,7 @@ public class PipeScript : MonoBehaviour
         
     }
 
-    private void UpdatePipeAppearance(bool output)
+    public void UpdatePipeAppearance(bool output)
     {
         _renderer.GetPropertyBlock(_material);
         if (output)
@@ -82,11 +80,11 @@ public class PipeScript : MonoBehaviour
         }
 
         // Для слотов возвращаем дефолтный цвет, если нет вентиля
-        // if (_source is SlotScript slot && slot.GetComponentInChildren<GateScript>() == null)
-        // {
-        //     _material.SetColor("_BaseColor", _color);
-        //     _material.SetColor("_EmissionColor", Color.black); // Без свечения
-        // }
+        if (_source is SlotScript slot && slot.GetComponentInChildren<GateScript>() == null)
+        {
+            _material.SetColor("_BaseColor", _color);
+            _material.SetColor("_EmissionColor", Color.black); // Без свечения
+        }
 
         _renderer.SetPropertyBlock(_material);
     }
