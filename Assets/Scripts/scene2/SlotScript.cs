@@ -26,7 +26,7 @@ public class SlotScript : MonoBehaviour
         
         if (outputTarget is TabloScript tablo)
         {
-            tablo.UpdateDisplay(result);
+            tablo.SetValue(result);
         }
         return result;
     }

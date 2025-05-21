@@ -1,16 +1,29 @@
+using System;
 using UnityEngine;
 
 public class LevelManager : MonoBehaviour
 {
-    // Start is called once before the first execution of Update after the MonoBehaviour is created
-    void Start()
+    public static LevelManager instance;
+    public RoomManager currentRoomManager;
+
+    private void Awake()
     {
+        if (instance == null)
+        {
+            instance = this;
+            DontDestroyOnLoad(gameObject);
+        }
+        else
+        {
+            Destroy(gameObject);
+        }
         
     }
 
-    // Update is called once per frame
-    void Update()
+    public void EnterRoom(RoomManager roomManager)
     {
-        
+        Debug.Log($"Игрок вошел в комнату {roomManager.gameObject.name}");
+        currentRoomManager = roomManager;
+        currentRoomManager.InitializeRoom();
     }
 }

@@ -18,9 +18,21 @@ public class RoomManager : MonoBehaviour
     public InventoryUI inventoryUI;
     public TextAsset connectionsJson;
     
+    // UI поля
+    public GameObject inventoryPanel; // Панель инвентаря
+    public TMPro.TextMeshProUGUI goalText; // Текст цели
+    public GameObject rulesPanel; // Панель с правилами
+    public TMPro.TextMeshProUGUI rulesText; // Текст правил
+    public GameObject successPanel; // Панель успеха
+    public TMPro.TextMeshProUGUI successText; // Текст успеха
+    
     private PlayerInputController _playerInputController;
     private Dictionary<string, Dictionary<string, string[]>> wallConnections;
 
+    private bool[] targetNumber = new bool[3]; // Целевое 3-битное число (например, [true, true, false] = 110)
+    private TabloScript[] tablos; // Табло (tablo1, tablo2, tablo3)
+    private bool hasEnteredRoom = false;
+    
     private void Awake()
     {
         instance = this;
@@ -58,15 +70,31 @@ public class RoomManager : MonoBehaviour
         {
             Debug.LogError("JSON-файл не привязан в RoomManager!");
         }
+        
+        // Инициализация UI
+        if (inventoryPanel != null)
+        {
+            inventoryPanel.SetActive(false);
+        }
+        if (rulesPanel != null)
+        {
+            rulesPanel.SetActive(false);
+        }
+        if (successPanel != null)
+        {
+            successPanel.SetActive(false);
+        }
     }
 
-    // Start is called once before the first execution of Update after the MonoBehaviour is created
-    void Start()
-    {
+    public void InitializeRoom()
+    { 
         SetupSlotsAndPipes();
         GenerateInputs();
         AssignSlotConnections();
+        InitializeGoal();
+        InitializeUI();
     }
+    
 
     private void SetupSlotsAndPipes()
     {
@@ -236,140 +264,298 @@ public class RoomManager : MonoBehaviour
         }
     }
 
-private void AssignSlotConnections()
-{
-    if (roomContainer == null)
+    private void AssignSlotConnections()
     {
-        Debug.LogError("Room_1 container не назначен в RoomManager!");
-        return;
-    }
-
-    if (wallConnections == null)
-    {
-        Debug.LogError("Конфигурация стен из JSON не загружена!");
-        return;
-    }
-
-    // Получаем все трансформы
-    Transform[] walls = roomContainer.GetComponentsInChildren<Transform>(true);
-    Debug.Log($"Все трансформы: {string.Join(", ", walls.Select(t => t.name))}");
-
-    // Фильтруем только прямые дочерние объекты roomContainer с корректными именами
-    walls = walls.Where(t => t.parent == roomContainer.transform && t.name.StartsWith("wall_")).ToArray();
-    Debug.Log($"Отфильтрованные стены: {string.Join(", ", walls.Select(t => t.name))}");
-
-    // Сортируем стены по числовому значению в имени
-    walls = walls.OrderBy(t =>
-    {
-        string numberPart = t.name.Replace("wall_", "");
-        if (int.TryParse(numberPart, out int number))
+        if (roomContainer == null)
         {
-            return number;
-        }
-        Debug.LogWarning($"Невалидное имя стены: {t.name}. Ожидается формат 'wall_X', где X - число.");
-        return int.MaxValue; // Помещаем невалидные имена в конец
-    }).ToArray();
-
-    Debug.Log($"Найдено стен: {walls.Length} ({string.Join(", ", walls.Select(w => w.name))})");
-
-    for (int i = 0; i < walls.Length; i++)
-    {
-        Transform wall = walls[i];
-        string wallName = wall.name;
-        Debug.Log($"Обрабатываем стену: {wallName}");
-
-        if (!wallConnections.ContainsKey(wallName))
-        {
-            Debug.LogWarning($"Конфигурация для {wallName} не найдена в JSON");
-            continue;
+            Debug.LogError("Room_1 container не назначен в RoomManager!");
+            return;
         }
 
-        Transform slotsContainer = wall.Find("Slots");
-        Transform inputsContainer = wall.Find("Inputs");
-        if (slotsContainer == null || inputsContainer == null)
+        if (wallConnections == null)
         {
-            Debug.LogWarning($"Slots или Inputs не найдены в {wallName}");
-            continue;
+            Debug.LogError("Конфигурация стен из JSON не загружена!");
+            return;
         }
 
-        // Находим слоты с тегами Slot или NegatedSlot
-        SlotScript[] slots = slotsContainer.GetComponentsInChildren<SlotScript>(true)
-            .Where(s => s.gameObject.tag == "Slot" || s.gameObject.tag == "NegatedSlot")
-            .OrderBy(s => 
-            {
-                string slotNumber = s.transform.parent.name.Replace("Slot_", "");
-                return int.TryParse(slotNumber, out int num) ? num : int.MaxValue;
-            })
-            .ToArray();
-        InputScript[] inputs = inputsContainer.GetComponentsInChildren<InputScript>(true)
-            .OrderBy(i => 
-            {
-                string inputNumber = i.name.Replace("Input_", "");
-                return int.TryParse(inputNumber, out int num) ? num : int.MaxValue;
-            })
-            .ToArray();
+        // Получаем все трансформы
+        Transform[] walls = roomContainer.GetComponentsInChildren<Transform>(true);
+        Debug.Log($"Все трансформы: {string.Join(", ", walls.Select(t => t.name))}");
 
-        Debug.Log($"Найдено слотов в {wallName}: {slots.Length} ({string.Join(", ", slots.Select(s => $"{s.transform.parent.name} ({s.gameObject.tag})"))})");
-        Debug.Log($"Найдено входов в {wallName}: {inputs.Length} ({string.Join(", ", inputs.Select(i => i.name))})");
+        // Фильтруем только прямые дочерние объекты roomContainer с корректными именами
+        walls = walls.Where(t => t.parent == roomContainer.transform && t.name.StartsWith("wall_")).ToArray();
+        Debug.Log($"Отфильтрованные стены: {string.Join(", ", walls.Select(t => t.name))}");
 
-        // Создаем словари для быстрого доступа по имени
-        var slotDict = slots.ToDictionary(s => s.transform.parent.name, s => s);
-        var inputDict = inputs.ToDictionary(i => i.name, i => i);
-
-        var slotConnections = wallConnections[wallName];
-        foreach (var slotConnection in slotConnections)
+        // Сортируем стены по числовому значению в имени
+        walls = walls.OrderBy(t =>
         {
-            string slotName = slotConnection.Key;
-            string[] sourceNames = slotConnection.Value;
-
-            if (slotDict.ContainsKey(slotName))
+            string numberPart = t.name.Replace("wall_", "");
+            if (int.TryParse(numberPart, out int number))
             {
-                SlotScript slot = slotDict[slotName];
-                MonoBehaviour[] sources = new MonoBehaviour[2];
+                return number;
+            }
+            Debug.LogWarning($"Невалидное имя стены: {t.name}. Ожидается формат 'wall_X', где X - число.");
+            return int.MaxValue; // Помещаем невалидные имена в конец
+        }).ToArray();
 
-                for (int k = 0; k < 2; k++)
+        Debug.Log($"Найдено стен: {walls.Length} ({string.Join(", ", walls.Select(w => w.name))})");
+
+        for (int i = 0; i < walls.Length; i++)
+        {
+            Transform wall = walls[i];
+            string wallName = wall.name;
+            Debug.Log($"Обрабатываем стену: {wallName}");
+
+            if (!wallConnections.ContainsKey(wallName))
+            {
+                Debug.LogWarning($"Конфигурация для {wallName} не найдена в JSON");
+                continue;
+            }
+
+            Transform slotsContainer = wall.Find("Slots");
+            Transform inputsContainer = wall.Find("Inputs");
+            if (slotsContainer == null || inputsContainer == null)
+            {
+                Debug.LogWarning($"Slots или Inputs не найдены в {wallName}");
+                continue;
+            }
+
+            // Находим слоты с тегами Slot или NegatedSlot
+            SlotScript[] slots = slotsContainer.GetComponentsInChildren<SlotScript>(true)
+                .Where(s => s.gameObject.tag == "Slot" || s.gameObject.tag == "NegatedSlot")
+                .OrderBy(s => 
                 {
-                    string sourceName = sourceNames[k];
-                    if (slotDict.ContainsKey(sourceName))
+                    string slotNumber = s.transform.parent.name.Replace("Slot_", "");
+                    return int.TryParse(slotNumber, out int num) ? num : int.MaxValue;
+                })
+                .ToArray();
+            InputScript[] inputs = inputsContainer.GetComponentsInChildren<InputScript>(true)
+                .OrderBy(i => 
+                {
+                    string inputNumber = i.name.Replace("Input_", "");
+                    return int.TryParse(inputNumber, out int num) ? num : int.MaxValue;
+                })
+                .ToArray();
+
+            Debug.Log($"Найдено слотов в {wallName}: {slots.Length} ({string.Join(", ", slots.Select(s => $"{s.transform.parent.name} ({s.gameObject.tag})"))})");
+            Debug.Log($"Найдено входов в {wallName}: {inputs.Length} ({string.Join(", ", inputs.Select(i => i.name))})");
+
+            // Создаем словари для быстрого доступа по имени
+            var slotDict = slots.ToDictionary(s => s.transform.parent.name, s => s);
+            var inputDict = inputs.ToDictionary(i => i.name, i => i);
+
+            var slotConnections = wallConnections[wallName];
+            foreach (var slotConnection in slotConnections)
+            {
+                string slotName = slotConnection.Key;
+                string[] sourceNames = slotConnection.Value;
+
+                if (slotDict.ContainsKey(slotName))
+                {
+                    SlotScript slot = slotDict[slotName];
+                    MonoBehaviour[] sources = new MonoBehaviour[2];
+
+                    for (int k = 0; k < 2; k++)
                     {
-                        sources[k] = slotDict[sourceName];
-                        Debug.Log($"Связь для {slotName}: Источник {k + 1} = {sourceName} (Slot)");
+                        string sourceName = sourceNames[k];
+                        if (slotDict.ContainsKey(sourceName))
+                        {
+                            sources[k] = slotDict[sourceName];
+                            Debug.Log($"Связь для {slotName}: Источник {k + 1} = {sourceName} (Slot)");
+                        }
+                        else if (inputDict.ContainsKey(sourceName))
+                        {
+                            sources[k] = inputDict[sourceName];
+                            Debug.Log($"Связь для {slotName}: Источник {k + 1} = {sourceName} (Input)");
+                        }
+                        else
+                        {
+                            Debug.LogError($"Источник {sourceName} не найден для {slotName} на {wallName}");
+                        }
                     }
-                    else if (inputDict.ContainsKey(sourceName))
+                    slot.inputs = sources;
+                }
+                else
+                {
+                    Debug.LogWarning($"Слот {slotName} не найден на {wallName}");
+                }
+            }
+
+            // Связываем Slot_7 с табло
+            if (slotDict.ContainsKey("Slot_7"))
+            {
+                SlotScript slot7 = slotDict["Slot_7"];
+                slot7.outputTarget = GameObject.Find($"Tablo/tablo{i + 1}")?.GetComponent<TabloScript>();
+                if (slot7.outputTarget == null)
+                {
+                    Debug.LogWarning($"Tablo{i + 1} не найдено для {wallName}");
+                }
+                else
+                {
+                    Debug.Log($"Slot_7 связан с табло: {slot7.outputTarget.name}");
+                }
+            }
+        }
+    }
+
+    private void InitializeGoal()
+    {
+        // Генерируем случайное 3-битное число
+        for (int i = 0; i < 3; i++)
+        {
+            targetNumber[i] = Random.value > 0.5f;
+        }
+    
+        // Отображаем цель в UI (tablo3, tablo2, tablo1)
+        if (goalText != null)
+        {
+            goalText.text = $"Цель: {(targetNumber[2] ? "1" : "0")}{(targetNumber[1] ? "1" : "0")}{(targetNumber[0] ? "1" : "0")}";
+        }
+        else
+        {
+            Debug.LogWarning("goalText не назначен в RoomManager!");
+        }
+    
+        // Скрываем панель успеха
+        if (successPanel != null)
+        {
+            successPanel.SetActive(false);
+        }
+    }
+    
+    // Новый метод для проверки результата
+    public void CheckGoal()
+    {
+        // Проверяем, все ли табло имеют значение
+        bool allTablosReady = true;
+        bool[] currentNumber = new bool[3];
+        for (int i = 0; i < 3; i++)
+        {
+            if (tablos[i] == null || !tablos[i].HasValue())
+            {
+                allTablosReady = false;
+                break;
+            }
+            currentNumber[i] = tablos[i].GetValue();
+        }
+
+        if (allTablosReady)
+        {
+            // Сравниваем текущее число с целевым
+            bool success = true;
+            for (int i = 0; i < 3; i++)
+            {
+                if (currentNumber[i] != targetNumber[i])
+                {
+                    success = false;
+                    break;
+                }
+            }
+
+            if (success)
+            {
+                if (successPanel != null)
+                {
+                    successPanel.SetActive(true);
+                    if (successText != null)
                     {
-                        sources[k] = inputDict[sourceName];
-                        Debug.Log($"Связь для {slotName}: Источник {k + 1} = {sourceName} (Input)");
-                    }
-                    else
-                    {
-                        Debug.LogError($"Источник {sourceName} не найден для {slotName} на {wallName}");
+                        successText.text = "Задание выполнено!\nНажмите 'Далее' для следующей комнаты.";
                     }
                 }
-                slot.inputs = sources;
+                Debug.Log("Цель достигнута!");
             }
             else
             {
-                Debug.LogWarning($"Слот {slotName} не найден на {wallName}");
-            }
-        }
-
-        // Связываем Slot_7 с табло
-        if (slotDict.ContainsKey("Slot_7"))
-        {
-            SlotScript slot7 = slotDict["Slot_7"];
-            slot7.outputTarget = GameObject.Find($"Tablo/tablo{i + 1}")?.GetComponent<TabloScript>();
-            if (slot7.outputTarget == null)
-            {
-                Debug.LogWarning($"Tablo{i + 1} не найдено для {wallName}");
-            }
-            else
-            {
-                Debug.Log($"Slot_7 связан с табло: {slot7.outputTarget.name}");
+                Debug.Log("Цель не достигнута.");
             }
         }
     }
-}
 
+    private void InitializeUI()
+    {
+        // Показываем InventoryPanel
+        if (inventoryPanel != null)
+        {
+            inventoryPanel.SetActive(true);
+            Debug.Log("InventoryPanel активирован");
+        }
+        else
+        {
+            Debug.LogWarning("inventoryPanel не назначен в RoomManager!");
+        }
+        
+        // Показываем RulesPanel только при первом входе
+        if (!hasEnteredRoom && rulesPanel != null)
+        {
+            rulesPanel.SetActive(true);
+            if (rulesText != null)
+            {
+                rulesText.text = "Правила:\n" +
+                                 "1. Разместите вентили (AND или OR) на всех слотах.\n" +
+                                 "2. Каждое табло над дверью должно показать 0 или 1.\n" +
+                                 "3. Ваша цель — собрать число, указанное вверху экрана.";
+            }
+            Debug.Log("RulesPanel активирован (первый вход)");
+            hasEnteredRoom = true; // Отмечаем, что вход был
+        }
+        else if (!hasEnteredRoom)
+        {
+            Debug.LogWarning("rulesPanel не назначен в RoomManager!");
+            hasEnteredRoom = true; // Всё равно отмечаем, чтобы не пытаться снова
+        }
+
+
+        // Скрываем successPanel
+        if (successPanel != null)
+        {
+            successPanel.SetActive(false);
+        }
+    }
+    
+    // Показ RulesPanel (для кнопки со знаком вопроса)
+    public void ShowRulesPanel()
+    {
+        if (rulesPanel != null)
+        {
+            rulesPanel.SetActive(true);
+            if (rulesText != null)
+            {
+                rulesText.text = "Правила:\n" +
+                                 "1. Разместите вентили (AND или OR) на слотах, чтобы получить нужное число на табло.\n" +
+                                 "2. Каждое табло (tablo1, tablo2, tablo3) должно показать 0 или 1.\n" +
+                                 "3. Ваша цель — собрать число, указанное вверху экрана (например, 110).\n" +
+                                 "Нажмите OK, чтобы закрыть.";
+            }
+            Debug.Log("RulesPanel открыт через кнопку");
+        }
+        else
+        {
+            Debug.LogWarning("rulesPanel не назначен в RoomManager!");
+        }
+    }
+    
+    // Закрытие RulesPanel
+    public void CloseRulesPanel()
+    {
+        if (rulesPanel != null)
+        {
+            rulesPanel.SetActive(false);
+            Debug.Log("RulesPanel закрыт");
+        }
+    }
+
+    // Закрытие SuccessPanel (и, возможно, перехода)
+    public void CloseSuccessPanel()
+    {
+        if (successPanel != null)
+        {
+            successPanel.SetActive(false);
+            Debug.Log("SuccessPanel закрыт");
+            // TODO: Добавить переход к следующей комнате
+            // Например: LevelManager.instance.LoadNextRoom();
+        }
+    }
+    
     public GameObject GetGatePrefab(GateScript.GateType type)
     {
         switch (type)
@@ -387,7 +573,7 @@ private void AssignSlotConnections()
     {
         if (inventoryUI.GetSelectedGateType() != null)
         {
-            Ray ray = Camera.main.ScreenPointToRay(Mouse.current.position.ReadValue());
+            Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
             if (Physics.Raycast(ray, out RaycastHit hit))
             {
                 SlotScript slot = hit.collider.GetComponent<SlotScript>();
