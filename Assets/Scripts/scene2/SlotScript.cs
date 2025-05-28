@@ -62,7 +62,7 @@ public class SlotScript : MonoBehaviour
             {
                 bool output = GetOutput();
                 pipe.UpdatePipeAppearance(output);
-                Debug.Log($"PlaceGate: Обновлена труба для {gameObject.name}, output = {output}, gateType = {type}, tag = {gameObject.tag}");
+                //Debug.Log($"PlaceGate: Обновлена труба для {gameObject.name}, output = {output}, gateType = {type}, tag = {gameObject.tag}");
             }
             else
             {
@@ -71,11 +71,17 @@ public class SlotScript : MonoBehaviour
         }
     }
 
-    private void OnMouseDown()
-    {
-        if (RoomManager.instance.inventoryUI.GetSelectedGateType() != null)
-        {
-            PlaceGate(RoomManager.instance.inventoryUI.GetSelectedGateType().Value);
-        }
-    }
+    // private void OnMouseDown()
+    // {
+    //     if (RoomManager.instance.isRoomCompleted)
+    //     {
+    //         Debug.Log("Комната завершена, взаимодействие с слотами заблокировано");
+    //         return;
+    //     }
+    //     
+    //     if (RoomManager.instance.inventoryUI.GetSelectedGateType() != null)
+    //     {
+    //         PlaceGate(RoomManager.instance.inventoryUI.GetSelectedGateType().Value);
+    //     }
+    // }
 }

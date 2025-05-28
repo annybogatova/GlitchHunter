@@ -28,7 +28,7 @@ public class PlayerInputController : MonoBehaviour
 
     private void OnRun(InputValue inputValue)
     {
-        Debug.Log($"Run pressed: {inputValue.isPressed}");
+        //Debug.Log($"Run pressed: {inputValue.isPressed}");
         IsRunning = inputValue.isPressed;
     }
     
@@ -49,6 +49,7 @@ public class PlayerInputController : MonoBehaviour
         if (inputValue.isPressed)
         {
             OnInteractPressed?.Invoke();
+            Debug.Log($"Interact pressed: {inputValue.isPressed}");
         }
     }
 }

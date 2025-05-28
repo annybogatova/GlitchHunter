@@ -2,10 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
-using UnityEngine.InputSystem;
 using Random = UnityEngine.Random;
 
-public class RoomManager : MonoBehaviour
+public class RoomManager : MonoBehaviour, IRoomManager
 {
     public static RoomManager instance;
     public GateScript.GateType? selectedGateType = null;
@@ -26,21 +25,30 @@ public class RoomManager : MonoBehaviour
     public GameObject successPanel; // Панель успеха
     public TMPro.TextMeshProUGUI successText; // Текст успеха
     
+    // Элементы инвентаря для этой комнаты
+    [SerializeField] private InventoryItem[] inventoryItems; // Настраивается в инспекторе
+    
     private PlayerInputController _playerInputController;
     private Dictionary<string, Dictionary<string, string[]>> wallConnections;
 
     private bool[] targetNumber = new bool[3]; // Целевое 3-битное число (например, [true, true, false] = 110)
     private TabloScript[] tablos; // Табло (tablo1, tablo2, tablo3)
-    private bool hasEnteredRoom = false;
+    
+    public string roomId { get => "Room_1"; } // Уникальный идентификатор комнаты
+    public bool isRoomCompleted = false;
     
     private void Awake()
     {
         instance = this;
-        _playerInputController = FindObjectOfType<PlayerInputController>();
+        _playerInputController = FindFirstObjectByType<PlayerInputController>();
 
         if (_playerInputController != null)
         {
             _playerInputController.OnInteractPressed += () => Interact();
+        }
+        else
+        {
+            Debug.LogWarning("No player input controller found");
         }
         
         // Парсинг JSON-файла
@@ -59,7 +67,7 @@ public class RoomManager : MonoBehaviour
                     }
                     wallConnections[wall.wallName] = slotDict;
                 }
-                Debug.Log($"JSON успешно распарсен. Найдено стен: {wallConnections.Keys.Count} ({string.Join(", ", wallConnections.Keys)})");
+                //Debug.Log($"JSON успешно распарсен. Найдено стен: {wallConnections.Keys.Count} ({string.Join(", ", wallConnections.Keys)})");
             }
             catch (System.Exception e)
             {
@@ -84,10 +92,39 @@ public class RoomManager : MonoBehaviour
         {
             successPanel.SetActive(false);
         }
+        
+        // Инициализируем инвентарь
+        if (inventoryUI != null && inventoryItems != null)
+        {
+            inventoryUI.InitializeInventory(inventoryItems, roomId);
+        }
+        else
+        {
+            Debug.LogWarning("InventoryUI или inventoryItems не назначены!");
+        }
+    }
+    
+    public InventoryItem[] GetInventoryItems()
+    {
+        return inventoryItems;
     }
 
     public void InitializeRoom()
     { 
+        Debug.Log("InitializeRoom");
+        // Проверяем, завершена ли комната
+        if (LevelManager.instance.IsRoomCompleted(roomId))
+        {
+            isRoomCompleted = true;
+            Debug.Log($"Комната {roomId} уже завершена, пропускаем инициализацию");
+            return;
+        }
+
+        if (isRoomCompleted)
+        {
+            LevelManager.instance.CompleteRoom(roomId);
+            return;
+        }
         SetupSlotsAndPipes();
         GenerateInputs();
         AssignSlotConnections();
@@ -277,14 +314,33 @@ public class RoomManager : MonoBehaviour
             Debug.LogError("Конфигурация стен из JSON не загружена!");
             return;
         }
+        
+        // Инициализируем массив tablos
+        tablos = new TabloScript[3];
+        for (int i = 0; i < 3; i++)
+        {
+            GameObject tabloObj = GameObject.Find($"Tablo/tablo{i + 1}");
+            if (tabloObj != null)
+            {
+                tablos[i] = tabloObj.GetComponent<TabloScript>();
+                if (tablos[i] == null)
+                {
+                    Debug.LogError($"TabloScript не найден на объекте Tablo/tablo{i + 1}");
+                }
+            }
+            else
+            {
+                Debug.LogError($"Объект Tablo/tablo{i + 1} не найден в иерархии!");
+            }
+        }
 
         // Получаем все трансформы
         Transform[] walls = roomContainer.GetComponentsInChildren<Transform>(true);
-        Debug.Log($"Все трансформы: {string.Join(", ", walls.Select(t => t.name))}");
+        //Debug.Log($"Все трансформы: {string.Join(", ", walls.Select(t => t.name))}");
 
         // Фильтруем только прямые дочерние объекты roomContainer с корректными именами
         walls = walls.Where(t => t.parent == roomContainer.transform && t.name.StartsWith("wall_")).ToArray();
-        Debug.Log($"Отфильтрованные стены: {string.Join(", ", walls.Select(t => t.name))}");
+        //Debug.Log($"Отфильтрованные стены: {string.Join(", ", walls.Select(t => t.name))}");
 
         // Сортируем стены по числовому значению в имени
         walls = walls.OrderBy(t =>
@@ -298,13 +354,13 @@ public class RoomManager : MonoBehaviour
             return int.MaxValue; // Помещаем невалидные имена в конец
         }).ToArray();
 
-        Debug.Log($"Найдено стен: {walls.Length} ({string.Join(", ", walls.Select(w => w.name))})");
+        //Debug.Log($"Найдено стен: {walls.Length} ({string.Join(", ", walls.Select(w => w.name))})");
 
         for (int i = 0; i < walls.Length; i++)
         {
             Transform wall = walls[i];
             string wallName = wall.name;
-            Debug.Log($"Обрабатываем стену: {wallName}");
+            //Debug.Log($"Обрабатываем стену: {wallName}");
 
             if (!wallConnections.ContainsKey(wallName))
             {
@@ -337,8 +393,8 @@ public class RoomManager : MonoBehaviour
                 })
                 .ToArray();
 
-            Debug.Log($"Найдено слотов в {wallName}: {slots.Length} ({string.Join(", ", slots.Select(s => $"{s.transform.parent.name} ({s.gameObject.tag})"))})");
-            Debug.Log($"Найдено входов в {wallName}: {inputs.Length} ({string.Join(", ", inputs.Select(i => i.name))})");
+            //Debug.Log($"Найдено слотов в {wallName}: {slots.Length} ({string.Join(", ", slots.Select(s => $"{s.transform.parent.name} ({s.gameObject.tag})"))})");
+            //Debug.Log($"Найдено входов в {wallName}: {inputs.Length} ({string.Join(", ", inputs.Select(i => i.name))})");
 
             // Создаем словари для быстрого доступа по имени
             var slotDict = slots.ToDictionary(s => s.transform.parent.name, s => s);
@@ -361,12 +417,12 @@ public class RoomManager : MonoBehaviour
                         if (slotDict.ContainsKey(sourceName))
                         {
                             sources[k] = slotDict[sourceName];
-                            Debug.Log($"Связь для {slotName}: Источник {k + 1} = {sourceName} (Slot)");
+                            //Debug.Log($"Связь для {slotName}: Источник {k + 1} = {sourceName} (Slot)");
                         }
                         else if (inputDict.ContainsKey(sourceName))
                         {
                             sources[k] = inputDict[sourceName];
-                            Debug.Log($"Связь для {slotName}: Источник {k + 1} = {sourceName} (Input)");
+                            //Debug.Log($"Связь для {slotName}: Источник {k + 1} = {sourceName} (Input)");
                         }
                         else
                         {
@@ -385,14 +441,14 @@ public class RoomManager : MonoBehaviour
             if (slotDict.ContainsKey("Slot_7"))
             {
                 SlotScript slot7 = slotDict["Slot_7"];
-                slot7.outputTarget = GameObject.Find($"Tablo/tablo{i + 1}")?.GetComponent<TabloScript>();
-                if (slot7.outputTarget == null)
+                if (i < tablos.Length && tablos[i] != null)
                 {
-                    Debug.LogWarning($"Tablo{i + 1} не найдено для {wallName}");
+                    slot7.outputTarget = tablos[i];
+                    //Debug.Log($"Slot_7 на {wallName} связан с табло: tablo{i + 1}");
                 }
                 else
                 {
-                    Debug.Log($"Slot_7 связан с табло: {slot7.outputTarget.name}");
+                    Debug.LogError($"Tablo{i + 1} не инициализировано для Slot_7 на {wallName}");
                 }
             }
         }
@@ -400,6 +456,7 @@ public class RoomManager : MonoBehaviour
 
     private void InitializeGoal()
     {
+        Debug.Log("InitializeGoal");
         // Генерируем случайное 3-битное число
         for (int i = 0; i < 3; i++)
         {
@@ -423,25 +480,37 @@ public class RoomManager : MonoBehaviour
         }
     }
     
-    // Новый метод для проверки результата
+    // метод для проверки результата
     public void CheckGoal()
     {
-        // Проверяем, все ли табло имеют значение
+        if (tablos == null || tablos.Length != 3)
+        {
+            Debug.LogError("Массив tablos не инициализирован или имеет неверную длину!");
+            return;
+        }
+
         bool allTablosReady = true;
         bool[] currentNumber = new bool[3];
         for (int i = 0; i < 3; i++)
         {
-            if (tablos[i] == null || !tablos[i].HasValue())
+            if (tablos[i] == null)
             {
+                Debug.LogError($"tablos[{i}] (tablo{i + 1}) is null!");
+                allTablosReady = false;
+                break;
+            }
+            if (!tablos[i].HasValue())
+            {
+                Debug.Log($"tablos[{i}] (tablo{i + 1}) has no value yet.");
                 allTablosReady = false;
                 break;
             }
             currentNumber[i] = tablos[i].GetValue();
+            Debug.Log($"tablos[{i}] (tablo{i + 1}) value: {(currentNumber[i] ? 1 : 0)}");
         }
 
         if (allTablosReady)
         {
-            // Сравниваем текущее число с целевым
             bool success = true;
             for (int i = 0; i < 3; i++)
             {
@@ -451,18 +520,20 @@ public class RoomManager : MonoBehaviour
                     break;
                 }
             }
-
+            Debug.Log($"Current: {(currentNumber[2] ? 1 : 0)}{(currentNumber[1] ? 1 : 0)}{(currentNumber[0] ? 1 : 0)}, Target: {(targetNumber[2] ? 1 : 0)}{(targetNumber[1] ? 1 : 0)}{(targetNumber[0] ? 1 : 0)}");
             if (success)
             {
+                isRoomCompleted = true;
+                LevelManager.instance.CompleteRoom(roomId);
                 if (successPanel != null)
                 {
                     successPanel.SetActive(true);
                     if (successText != null)
                     {
-                        successText.text = "Задание выполнено!\nНажмите 'Далее' для следующей комнаты.";
+                        successText.text = "Задание выполнено!\nПройдите к следующей комнате.";
                     }
                 }
-                Debug.Log("Цель достигнута!");
+                Debug.Log($"Цель достигнута в комнате {roomId}!");
             }
             else
             {
@@ -473,19 +544,7 @@ public class RoomManager : MonoBehaviour
 
     private void InitializeUI()
     {
-        // Показываем InventoryPanel
-        if (inventoryPanel != null)
-        {
-            inventoryPanel.SetActive(true);
-            Debug.Log("InventoryPanel активирован");
-        }
-        else
-        {
-            Debug.LogWarning("inventoryPanel не назначен в RoomManager!");
-        }
-        
-        // Показываем RulesPanel только при первом входе
-        if (!hasEnteredRoom && rulesPanel != null)
+        if (rulesPanel != null)
         {
             rulesPanel.SetActive(true);
             if (rulesText != null)
@@ -495,17 +554,13 @@ public class RoomManager : MonoBehaviour
                                  "2. Каждое табло над дверью должно показать 0 или 1.\n" +
                                  "3. Ваша цель — собрать число, указанное вверху экрана.";
             }
-            Debug.Log("RulesPanel активирован (первый вход)");
-            hasEnteredRoom = true; // Отмечаем, что вход был
+            //Debug.Log("RulesPanel активирован");
         }
-        else if (!hasEnteredRoom)
+        else
         {
             Debug.LogWarning("rulesPanel не назначен в RoomManager!");
-            hasEnteredRoom = true; // Всё равно отмечаем, чтобы не пытаться снова
         }
 
-
-        // Скрываем successPanel
         if (successPanel != null)
         {
             successPanel.SetActive(false);
@@ -521,12 +576,11 @@ public class RoomManager : MonoBehaviour
             if (rulesText != null)
             {
                 rulesText.text = "Правила:\n" +
-                                 "1. Разместите вентили (AND или OR) на слотах, чтобы получить нужное число на табло.\n" +
-                                 "2. Каждое табло (tablo1, tablo2, tablo3) должно показать 0 или 1.\n" +
-                                 "3. Ваша цель — собрать число, указанное вверху экрана (например, 110).\n" +
-                                 "Нажмите OK, чтобы закрыть.";
+                                 "1. Разместите вентили (AND или OR) всех на слотах.\n" +
+                                 "2. Каждое табло над дверью должно показать 0 или 1.\n" +
+                                 "3. Ваша цель — собрать число, указанное вверху экрана.\n";
             }
-            Debug.Log("RulesPanel открыт через кнопку");
+            //Debug.Log("RulesPanel открыт через кнопку");
         }
         else
         {
@@ -542,6 +596,15 @@ public class RoomManager : MonoBehaviour
             rulesPanel.SetActive(false);
             Debug.Log("RulesPanel закрыт");
         }
+        if (inventoryPanel != null)
+        {
+            inventoryPanel.SetActive(true);
+            Debug.Log("InventoryPanel активирован");
+        }
+        else
+        {
+            Debug.LogWarning("inventoryPanel не назначен в RoomManager!");
+        }
     }
 
     // Закрытие SuccessPanel (и, возможно, перехода)
@@ -551,8 +614,8 @@ public class RoomManager : MonoBehaviour
         {
             successPanel.SetActive(false);
             Debug.Log("SuccessPanel закрыт");
-            // TODO: Добавить переход к следующей комнате
-            // Например: LevelManager.instance.LoadNextRoom();
+            
+            inventoryPanel.SetActive(false);
         }
     }
     
@@ -571,17 +634,49 @@ public class RoomManager : MonoBehaviour
 
     public void Interact()
     {
-        if (inventoryUI.GetSelectedGateType() != null)
+        if (isRoomCompleted)
         {
-            Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
-            if (Physics.Raycast(ray, out RaycastHit hit))
+            Debug.Log("Комната завершена, взаимодействие с слотами заблокировано");
+            return;
+        }
+
+        if (inventoryUI == null || string.IsNullOrEmpty(inventoryUI.GetSelectedItemId()))
+        {
+            Debug.LogWarning("InventoryUI is null or no item selected");
+            return;
+        }
+
+        Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
+        if (Physics.Raycast(ray, out RaycastHit hit))
+        {
+            SlotScript slot = hit.collider.GetComponent<SlotScript>();
+            if (slot != null)
             {
-                SlotScript slot = hit.collider.GetComponent<SlotScript>();
-                if (slot != null)
+                string selectedId = inventoryUI.GetSelectedItemId();
+                // Преобразуем itemId в GateType (для обратной совместимости с Room_1)
+                GateScript.GateType? gateType = null;
+                if (selectedId == "AND") gateType = GateScript.GateType.AND;
+                else if (selectedId == "OR") gateType = GateScript.GateType.OR;
+
+                if (gateType.HasValue)
                 {
-                    slot.PlaceGate(inventoryUI.GetSelectedGateType().Value);
+                    slot.PlaceGate(gateType.Value);
+                    Debug.Log($"Вентиль {selectedId} размещён в {slot.transform.parent.name}");
+                    CheckGoal();
+                }
+                else
+                {
+                    Debug.LogError($"Неизвестный тип элемента: {selectedId}");
                 }
             }
+            else
+            {
+                Debug.Log("Raycast hit object without SlotScript");
+            }
+        }
+        else
+        {
+            Debug.Log("Raycast did not hit any object");
         }
     }
 }

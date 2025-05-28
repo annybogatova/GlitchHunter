@@ -1,12 +1,12 @@
 fileFormatVersion: 2
-guid: 7e88af628d51bbf4aa3ddba713245abd
+guid: 2eb6d08c7a663fd44a61f505a2569862
 TextureImporter:
   internalIDToNameTable: []
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
     mipMapMode: 0
-    enableMipMap: 1
+    enableMipMap: 0
     sRGBTexture: 1
     linearTexture: 0
     fadeOut: 0
@@ -37,13 +37,13 @@ TextureImporter:
     filterMode: 1
     aniso: 1
     mipBias: 0
-    wrapU: 0
-    wrapV: 0
+    wrapU: 1
+    wrapV: 1
     wrapW: 0
-  nPOTScale: 1
+  nPOTScale: 0
   lightmap: 0
   compressionQuality: 50
-  spriteMode: 0
+  spriteMode: 2
   spriteExtrude: 1
   spriteMeshType: 1
   alignment: 0
@@ -52,9 +52,9 @@ TextureImporter:
   spriteBorder: {x: 0, y: 0, z: 0, w: 0}
   spriteGenerateFallbackPhysicsShape: 1
   alphaUsage: 1
-  alphaIsTransparency: 0
+  alphaIsTransparency: 1
   spriteTessellationDetail: -1
-  textureType: 0
+  textureType: 8
   textureShape: 1
   singleChannelComponent: 0
   flipbookRows: 1
@@ -108,12 +108,35 @@ TextureImporter:
     forceMaximumCompressionQuality_BC6H_BC7: 0
   spriteSheet:
     serializedVersion: 2
-    sprites: []
+    sprites:
+    - serializedVersion: 2
+      name: "\u0422\u0430\u0431\u043B\u0438\u0447\u043A\u0430 \u0438\u0441\u0442\u0435\u043D\u043D\u043E\u0441\u0442\u0438
+        AND_0"
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 0
+        width: 2405
+        height: 2697
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 7cd9558a7a3638b4f9792d38f5d4526d
+      internalID: -380101976
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
     outline: []
     customData: 
     physicsShape: []
     bones: []
-    spriteID: 
+    spriteID: fa9805606af9d6e4abd84692f6c5e3aa
     internalID: 0
     vertices: []
     indices: 
@@ -122,7 +145,8 @@ TextureImporter:
     secondaryTextures: []
     spriteCustomMetadata:
       entries: []
-    nameFileIdTable: {}
+    nameFileIdTable:
+      "\u0422\u0430\u0431\u043B\u0438\u0447\u043A\u0430 \u0438\u0441\u0442\u0435\u043D\u043D\u043E\u0441\u0442\u0438 AND_0": -380101976
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

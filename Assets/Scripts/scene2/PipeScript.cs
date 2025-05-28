@@ -41,7 +41,7 @@ public class PipeScript : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        if (_renderer == null || _source == null) return;
+        if (_renderer == null || _source == null || RoomManager.instance == null || RoomManager.instance.isRoomCompleted) return;
 
         bool output = GetOutput();
         if (output != _lastOutput)
