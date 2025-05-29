@@ -96,15 +96,7 @@ using Random = UnityEngine.Random;
                 successPanel.SetActive(false);
             }
             
-            // Инициализируем инвентарь
-            if (inventoryUI != null && inventoryItems != null)
-            {
-                inventoryUI.InitializeInventory(inventoryItems, roomId);
-            }
-            else
-            {
-                Debug.LogWarning("InventoryUI или inventoryItems не назначены!");
-            }
+            
         }
         
         public InventoryItem[] GetInventoryItems()
@@ -133,10 +125,21 @@ using Random = UnityEngine.Random;
             AssignSlotConnections();
             InitializeGoal();
             InitializeUI();
+            
             foreach (TabloScript tablo in tablos)
             {
                 if(tablo != null) 
                     tablo.OnValueChanged += _ => CheckGoal();
+            }
+            
+            // Инициализируем инвентарь
+            if (inventoryUI != null && inventoryItems != null)
+            {
+                inventoryUI.InitializeInventory(inventoryItems, roomId);
+            }
+            else
+            {
+                Debug.LogWarning("InventoryUI или inventoryItems не назначены!");
             }
         }
         

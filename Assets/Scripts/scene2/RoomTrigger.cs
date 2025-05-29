@@ -1,9 +1,4 @@
 using UnityEngine;
-public interface IRoomManager
-{
-    void InitializeRoom();
-    string roomId { get; } // Для идентификации комнаты
-}
 public class RoomTrigger : MonoBehaviour
 {
     [SerializeField] private MonoBehaviour roomManagerComponent; // Поле для перетаскивания в инспекторе

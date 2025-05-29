@@ -1,3 +1,4 @@
+using System.Collections;
 using UnityEngine;
 
 public enum SignType
@@ -7,49 +8,74 @@ public enum SignType
 }
 public class SignScript : MonoBehaviour
 {
-    public SignType? currentSign; // Текущий знак (null, если не размещён)
-    [SerializeField] private Renderer signRenderer; // Renderer для знака
-    private Material signMaterial; // Материал знака
-
-    // Цвета
-    private static readonly Color DefaultColor = Color.white;
-    private static readonly Color CorrectColor = Color.green;
-    private static readonly Color IncorrectColor = Color.red;
+    public int wallIndex;       // Индекс стены (0-2)
+    public int comparisonIndex; // Индекс сравнения (0-2)
+    public bool isCorrect = false;
+    
+    private Renderer signRenderer;
+    private MaterialPropertyBlock materialBlock;
+    private Room2Manager roomManager;
+    private Color defaultColor;
+    private Color defaultEmission;
 
     private void Awake()
     {
-        if (signRenderer == null)
+        signRenderer = GetComponent<Renderer>();
+        materialBlock = new MaterialPropertyBlock();
+        signRenderer.GetPropertyBlock(materialBlock);
+        
+        // Сохраняем исходные цвета
+        defaultColor = signRenderer.material.GetColor("_BaseColor");
+        defaultEmission = signRenderer.material.GetColor("_EmissionColor");
+        
+        roomManager = FindObjectOfType<Room2Manager>();
+    }
+
+    public void PlaceSign(string signType)
+    {
+        // Проверяем правильность знака
+        bool correct = roomManager.CheckSign(wallIndex, comparisonIndex, signType);
+        isCorrect = correct;
+        
+        // Устанавливаем визуал знака
+        if (correct)
         {
-            signRenderer = GetComponent<Renderer>();
-            if (signRenderer == null)
-            {
-                Debug.LogError($"Renderer не найден на {gameObject.name}!");
-                return;
-            }
+            SetSignColor(Color.green);
+            Debug.Log($"Знак {signType} установлен правильно!");
         }
-        signMaterial = signRenderer.material; // Получаем материал
+        else
+        {
+            SetSignColor(Color.red);
+            Debug.Log($"Знак {signType} установлен неправильно!");
+            StartCoroutine(ResetSignAfterDelay());
+        }
     }
 
-    public void PlaceSign(SignType signType)
+    private void SetSignColor(Color color)
     {
-        currentSign = signType;
-        signMaterial.color = DefaultColor; // Сбрасываем цвет
-        Debug.Log($"Знак {signType} размещён на {gameObject.name}");
+        signRenderer.GetPropertyBlock(materialBlock);
+        materialBlock.SetColor("_BaseColor", color);
+        materialBlock.SetColor("_EmissionColor", color * 2.5f);
+        signRenderer.SetPropertyBlock(materialBlock);
     }
 
-    public void SetCorrect()
+    private IEnumerator ResetSignAfterDelay()
     {
-        signMaterial.color = CorrectColor;
+        yield return new WaitForSeconds(2f);
+        
+        // Сбрасываем знак
+        ResetSignColor();
+        isCorrect = false;
+        
+        // Генерируем новые числа
+        roomManager.RegenerateNumbers(wallIndex, comparisonIndex);
     }
 
-    public void SetIncorrect()
+    public void ResetSignColor()
     {
-        signMaterial.color = IncorrectColor;
-    }
-
-    public void ResetSign()
-    {
-        currentSign = null;
-        signMaterial.color = DefaultColor;
+        signRenderer.GetPropertyBlock(materialBlock);
+        materialBlock.SetColor("_BaseColor", defaultColor);
+        materialBlock.SetColor("_EmissionColor", defaultEmission);
+        signRenderer.SetPropertyBlock(materialBlock);
     }
 }

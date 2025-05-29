@@ -104,6 +104,12 @@ public class LevelManager : MonoBehaviour
                 }
             }
         }
+        // Сбрасываем инвентарь перед входом в комнату
+        InventoryUI inventoryUI = FindObjectOfType<InventoryUI>();
+        if (inventoryUI != null)
+        {
+            inventoryUI.ClearInventory();
+        }
 
         // Активируем комнату
         currentRoomId = roomManager.roomId;

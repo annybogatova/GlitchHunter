@@ -8,6 +8,9 @@ public class InventoryUI : MonoBehaviour
     [SerializeField] private Image[] highlights; // Массив рамок подсветки
     private string selectedItemId; // ID выбранного элемента
     private PlayerInputController _playerInputController;
+    
+    private string currentRoomId; // Добавляем отслеживание текущей комнаты
+    private InventoryItem[] currentItems; // Текущие элементы инвентаря
 
     private void Awake()
     {
@@ -42,6 +45,14 @@ public class InventoryUI : MonoBehaviour
     // Инициализация инвентаря для комнаты
     public void InitializeInventory(InventoryItem[] items, string roomId)
     {
+        // Если комната изменилась - очищаем инвентарь
+        if (currentRoomId != roomId)
+        {
+            ClearInventory();
+            currentRoomId = roomId;
+            currentItems = items;
+        }
+
         if (items.Length > buttons.Length)
         {
             Debug.LogError($"Слишком много элементов ({items.Length}) для кнопок ({buttons.Length}) в комнате {roomId}!");
@@ -96,6 +107,27 @@ public class InventoryUI : MonoBehaviour
         Debug.Log($"Инвентарь инициализирован для комнаты {roomId} с {items.Length} элементами");
     }
 
+    public void ClearInventory()
+    {
+        // Сбрасываем выбранный элемент
+        selectedItemId = null;
+        
+        // Отключаем подсветку
+        for (int i = 0; i < highlights.Length; i++)
+        {
+            highlights[i].enabled = false;
+        }
+        
+        // Деактивируем кнопки
+        foreach (Button button in buttons)
+        {
+            button.gameObject.SetActive(false);
+            button.onClick.RemoveAllListeners();
+        }
+        
+        Debug.Log($"Инвентарь очищен для комнаты {currentRoomId}");
+    }
+    
     private void SelectItem(int index)
     {
         if (index < 0 || index >= buttons.Length || !buttons[index].gameObject.activeSelf)
@@ -108,7 +140,7 @@ public class InventoryUI : MonoBehaviour
         InventoryItem[] items = RoomManager.instance.GetInventoryItems();
         if (index < items.Length)
         {
-            selectedItemId = items[index].itemId;
+            selectedItemId = currentItems[index].itemId;
             Debug.Log($"Выбран элемент: {selectedItemId}");
 
             // Обновляем подсветку

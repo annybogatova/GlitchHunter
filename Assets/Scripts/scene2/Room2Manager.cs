@@ -60,6 +60,17 @@ public class Room2Manager : MonoBehaviour, IRoomManager
         InitializeTablosAndSigns();
         GenerateNumbers();
         InitializeUI();
+        
+        if (inventoryUI != null && inventoryItems != null)
+        {
+            inventoryUI.InitializeInventory(inventoryItems, roomId);
+            Debug.Log($"InventoryUI инициализирован для комнаты {roomId}");
+        }
+    }
+    
+    public InventoryItem[] GetInventoryItems()
+    {
+        return inventoryItems;
     }
 
     private void InitializeTablosAndSigns()
@@ -115,6 +126,8 @@ public class Room2Manager : MonoBehaviour, IRoomManager
 
     private void GenerateNumbers()
     {
+        tabloNumbers = new bool[3, 6, 8]; // Важно: именно такой порядок размерностей
+
         for (int wall = 0; wall < 3; wall++)
         {
             for (int tablo = 0; tablo < 6; tablo++)
@@ -160,6 +173,115 @@ public class Room2Manager : MonoBehaviour, IRoomManager
                 }
             }
         }
+    }
+    
+    public bool CheckSign(int wallIndex, int comparisonIndex, string signType)
+    {
+        // Получаем индексы табло для сравнения
+        int leftTabloIndex = comparisonIndex * 2;
+        int rightTabloIndex = comparisonIndex * 2 + 1;
+
+        // Конвертируем в числа
+        byte leftNumber = ConvertToByte(wallIndex, leftTabloIndex);
+        byte rightNumber = ConvertToByte(wallIndex, rightTabloIndex);
+
+        // Проверяем правильность знака
+        if (signType == "GreaterThan")
+        {
+            return leftNumber > rightNumber;
+        }
+        else if (signType == "LessThan")
+        {
+            return leftNumber < rightNumber;
+        }
+    
+        Debug.LogError($"Неизвестный тип знака: {signType}");
+        return false;
+    }
+    
+    private byte ConvertToByte(int wallIndex, int tabloIndex)
+    {
+        if (wallIndex < 0 || wallIndex >= 3 || 
+            tabloIndex < 0 || tabloIndex >= 6)
+        {
+            Debug.LogError($"Неверные индексы: wall={wallIndex}, tablo={tabloIndex}");
+            return 0;
+        }
+    
+        byte result = 0;
+        for (int bit = 0; bit < 8; bit++)
+        {
+            if (tabloNumbers[wallIndex, tabloIndex, bit])
+            {
+                result |= (byte)(1 << (7 - bit));
+            }
+        }
+        return result;
+    }
+    public void RegenerateNumbers(int wallIndex, int comparisonIndex)
+    {
+        int leftTabloIndex = comparisonIndex * 2;
+        int rightTabloIndex = comparisonIndex * 2 + 1;
+        
+        // Генерируем новые числа
+        for (int bit = 0; bit < 8; bit++)
+        {
+            tabloNumbers[wallIndex, leftTabloIndex, bit] = Random.value > 0.5f;
+            tabloNumbers[wallIndex, rightTabloIndex, bit] = Random.value > 0.5f;
+        }
+        
+        // Обновляем визуал
+        UpdateTabloVisual(wallIndex, leftTabloIndex);
+        UpdateTabloVisual(wallIndex, rightTabloIndex);
+        SignScript sign = GetSign(wallIndex, comparisonIndex);
+        if (sign != null) sign.ResetSignColor();
+    }
+
+    private void UpdateTabloVisual(int wallIndex, int tabloIndex)
+    {
+        string tabloName = $"Tablo_{wallIndex + 1}_{tabloIndex + 1}";
+        string comparisonPath = $"Wall_{wallIndex + 1}/Comparison_{(tabloIndex / 2 + 1)}/{tabloName}";
+        Transform tabloTransform = roomContainer.transform.Find(comparisonPath);
+        
+        if (tabloTransform == null) return;
+        
+        // Удаляем старые модели
+        foreach (Transform child in tabloTransform)
+        {
+            if (child.name == "One" || child.name == "Zero")
+            {
+                Destroy(child.gameObject);
+            }
+        }
+        
+        // Создаем новые модели
+        for (int bit = 0; bit < 8; bit++)
+        {
+            string cellName = $"cell_{wallIndex + 1}_{tabloIndex + 1}_{bit + 1}";
+            Transform cellTransform = tabloTransform.Find(cellName);
+            
+            if (cellTransform != null)
+            {
+                GameObject prefab = tabloNumbers[wallIndex, tabloIndex, bit] ? 
+                    onePrefab : zeroPrefab;
+                
+                if (prefab != null)
+                {
+                    Instantiate(prefab, cellTransform.position, 
+                        cellTransform.rotation, tabloTransform);
+                }
+            }
+        }
+    }
+    
+    private SignScript GetSign(int wallIndex, int comparisonIndex)
+    {
+        if (signs == null || wallIndex < 0 || wallIndex >= signs.GetLength(0) || 
+            comparisonIndex < 0 || comparisonIndex >= signs.GetLength(1))
+        {
+            return null;
+        }
+        return signs[wallIndex, comparisonIndex];
     }
 
     private void InitializeUI()
@@ -207,11 +329,25 @@ public class Room2Manager : MonoBehaviour, IRoomManager
             goalText.gameObject.SetActive(true);
             Debug.Log("GoalText активирован");
         }
+    }
+    
+    public void Interact()
+    {
+        if (isRoomCompleted) return;
 
-        if (inventoryUI != null && inventoryItems != null)
+        Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
+        if (Physics.Raycast(ray, out RaycastHit hit))
         {
-            inventoryUI.InitializeInventory(inventoryItems, roomId);
-            Debug.Log($"InventoryUI инициализирован для комнаты {roomId}");
+            SignScript sign = hit.collider.GetComponent<SignScript>();
+            if (sign != null && !sign.isCorrect)
+            {
+                string selectedItemId = inventoryUI.GetSelectedItemId();
+                
+                if (selectedItemId == "GreaterThan" || selectedItemId == "LessThan")
+                {
+                    sign.PlaceSign(selectedItemId);
+                }
+            }
         }
     }
 }
