@@ -69,6 +69,22 @@ public class SlotScript : MonoBehaviour
                 Debug.LogWarning($"PipeScript не найден в {transform.parent.name}");
             }
         }
+        RefreshCircuit();
+    }
+    private void RefreshCircuit()
+    {
+        // Обновляем себя
+        bool output = GetOutput();
+        
+        // Обновляем все зависимые элементы
+        if (outputTarget is TabloScript tablo)
+        {
+            tablo.SetValue(output);
+        }
+        
+        // Обновляем визуал трубы
+        PipeScript pipe = transform.parent.GetComponentInChildren<PipeScript>();
+        if (pipe != null) pipe.UpdatePipeAppearance(output);
     }
 
     // private void OnMouseDown()

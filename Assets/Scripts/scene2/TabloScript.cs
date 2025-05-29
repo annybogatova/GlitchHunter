@@ -7,10 +7,17 @@ public class TabloScript : MonoBehaviour
     private GameObject currentCell;
     
     private bool? value = null; // Текущее значение (null, если не установлено)
+    
+    public event System.Action<bool> OnValueChanged;
 
     // Устанавливает значение табло и обновляет визуализацию
     public void SetValue(bool newValue)
     {
+        if (value == newValue) return;
+        
+        value = newValue;
+        OnValueChanged?.Invoke(newValue);
+        
         value = newValue; // Сохраняем значение
         if (currentCell != null)
         {
