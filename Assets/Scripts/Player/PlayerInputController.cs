@@ -49,7 +49,6 @@ public class PlayerInputController : MonoBehaviour
         if (inputValue.isPressed)
         {
             OnInteractPressed?.Invoke();
-            Debug.Log($"Interact pressed: {inputValue.isPressed}");
         }
     }
 }

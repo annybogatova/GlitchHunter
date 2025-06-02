@@ -3,79 +3,99 @@ using UnityEngine;
 
 public enum SignType
 {
-    GreaterThan, // >
-    LessThan     // <
+    GreaterThan,
+    LessThan
 }
+
 public class SignScript : MonoBehaviour
 {
-    public int wallIndex;       // Индекс стены (0-2)
-    public int comparisonIndex; // Индекс сравнения (0-2)
-    public bool isCorrect = false;
-    
-    private Renderer signRenderer;
-    private MaterialPropertyBlock materialBlock;
+    public int wallIndex;       // 0-2
+    public int comparisonIndex; // 0-2
+    public bool isCorrect { get; private set; }
+
     private Room2Manager roomManager;
-    private Color defaultColor;
-    private Color defaultEmission;
+    private GameObject currentSign; // Текущий префаб знака
+    private MaterialPropertyBlock materialBlock;
 
     private void Awake()
     {
-        signRenderer = GetComponent<Renderer>();
-        materialBlock = new MaterialPropertyBlock();
-        signRenderer.GetPropertyBlock(materialBlock);
-        
-        // Сохраняем исходные цвета
-        defaultColor = signRenderer.material.GetColor("_BaseColor");
-        defaultEmission = signRenderer.material.GetColor("_EmissionColor");
-        
         roomManager = FindObjectOfType<Room2Manager>();
+        materialBlock = new MaterialPropertyBlock();
     }
 
     public void PlaceSign(string signType)
     {
-        // Проверяем правильность знака
+        // Отключаем Sign_X_Y
+        gameObject.SetActive(false);
+
+        // Создаём префаб
+        GameObject prefab = signType == "GreaterThan" ? roomManager.greaterThanPrefab : roomManager.lessThanPrefab;
+        if (prefab == null)
+        {
+            Debug.LogError($"Префаб для {signType} не назначен!");
+            gameObject.SetActive(true);
+            return;
+        }
+
+        currentSign = Instantiate(prefab, transform.position, Quaternion.identity, transform.parent);
+        // Проверяем правильность
         bool correct = roomManager.CheckSign(wallIndex, comparisonIndex, signType);
         isCorrect = correct;
-        
-        // Устанавливаем визуал знака
-        if (correct)
+
+        // Находим материал text
+        Renderer signRenderer = currentSign.GetComponent<Renderer>();
+        if (signRenderer == null)
         {
-            SetSignColor(Color.green);
-            Debug.Log($"Знак {signType} установлен правильно!");
+            Debug.LogError($"Renderer не найден на префабе {signType}!");
+            gameObject.SetActive(true);
+            Destroy(currentSign);
+            return;
         }
-        else
+
+        // Ищем материал с именем "text"
+        Material[] materials = signRenderer.materials;
+        int textMaterialIndex = -1;
+        for (int i = 0; i < materials.Length; i++)
         {
-            SetSignColor(Color.red);
-            Debug.Log($"Знак {signType} установлен неправильно!");
-            StartCoroutine(ResetSignAfterDelay());
+            if (materials[i].name.ToLower().Contains("text"))
+            {
+                textMaterialIndex = i;
+                break;
+            }
+        }
+
+        if (textMaterialIndex == -1)
+        {
+            Debug.LogError($"Материал 'text' не найден в префабе {signType}!");
+            gameObject.SetActive(true);
+            Destroy(currentSign);
+            return;
+        }
+
+        // Применяем цвет к материалу text
+        signRenderer.GetPropertyBlock(materialBlock, textMaterialIndex);
+        materialBlock.SetColor("_BaseColor", correct ? Color.green : Color.red);
+        signRenderer.SetPropertyBlock(materialBlock, textMaterialIndex);
+
+        Debug.Log($"Знак {signType} установлен {(correct ? "правильно" : "неправильно")}");
+
+        if (!correct)
+        {
+            roomManager.ResetSignAfterDelay(wallIndex, comparisonIndex);
         }
     }
 
-    private void SetSignColor(Color color)
+    public void ResetSign()
     {
-        signRenderer.GetPropertyBlock(materialBlock);
-        materialBlock.SetColor("_BaseColor", color);
-        materialBlock.SetColor("_EmissionColor", color * 2.5f);
-        signRenderer.SetPropertyBlock(materialBlock);
-    }
+        // Удаляем префаб
+        if (currentSign != null)
+        {
+            Destroy(currentSign);
+            currentSign = null;
+        }
 
-    private IEnumerator ResetSignAfterDelay()
-    {
-        yield return new WaitForSeconds(2f);
-        
-        // Сбрасываем знак
-        ResetSignColor();
+        // Включаем Sign_X_Y
+        gameObject.SetActive(true);
         isCorrect = false;
-        
-        // Генерируем новые числа
-        roomManager.RegenerateNumbers(wallIndex, comparisonIndex);
-    }
-
-    public void ResetSignColor()
-    {
-        signRenderer.GetPropertyBlock(materialBlock);
-        materialBlock.SetColor("_BaseColor", defaultColor);
-        materialBlock.SetColor("_EmissionColor", defaultEmission);
-        signRenderer.SetPropertyBlock(materialBlock);
     }
 }
