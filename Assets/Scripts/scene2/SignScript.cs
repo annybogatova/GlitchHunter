@@ -37,7 +37,7 @@ public class SignScript : MonoBehaviour
             return;
         }
 
-        currentSign = Instantiate(prefab, transform.position, Quaternion.identity, transform.parent);
+        currentSign = Instantiate(prefab, transform.position, transform.rotation, transform.parent);
         // Проверяем правильность
         bool correct = roomManager.CheckSign(wallIndex, comparisonIndex, signType);
         isCorrect = correct;

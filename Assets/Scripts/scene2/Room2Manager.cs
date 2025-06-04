@@ -14,12 +14,11 @@ public class Room2Manager : MonoBehaviour, IRoomManager
     
     // UI
     public GameObject inventoryPanel;
-    public TMPro.TextMeshProUGUI goalText;
     public GameObject rulesPanel;
     public TMPro.TextMeshProUGUI rulesText;
+    public TMPro.TextMeshProUGUI headerText; 
     public GameObject successPanel;
     public TMPro.TextMeshProUGUI successText;
-    public GameObject goalPanel;
 
     [SerializeField] private InventoryItem[] inventoryItems; // GreaterThan, LessThan
 
@@ -46,8 +45,6 @@ public class Room2Manager : MonoBehaviour, IRoomManager
         if (inventoryPanel != null) inventoryPanel.SetActive(false);
         if (rulesPanel != null) rulesPanel.SetActive(false);
         if (successPanel != null) successPanel.SetActive(false);
-        if (goalPanel != null) goalPanel.SetActive(false);
-        else if (goalText != null) goalText.gameObject.SetActive(false);
     }
 
     public void InitializeRoom()
@@ -83,12 +80,14 @@ public class Room2Manager : MonoBehaviour, IRoomManager
                                  "3. Правильный знак станет зелёным, неправильный — красным.\n" +
                                  "4. При ошибке числа обновятся через 2 секунды.";
             }
+            if (headerText != null)
+            {
+                headerText.text = "Сигнальный компаратор";
+            }
             Debug.Log("RulesPanel активирован");
         }
 
         if (inventoryPanel != null) inventoryPanel.SetActive(false);
-        if (goalPanel != null) goalPanel.SetActive(false);
-        else if (goalText != null) goalText.gameObject.SetActive(false);
         if (successPanel != null) successPanel.SetActive(false);
     }
 
@@ -271,20 +270,28 @@ public class Room2Manager : MonoBehaviour, IRoomManager
             isRoomCompleted = true;
             LevelManager.instance.CompleteRoom(roomId);
             successPanel?.SetActive(true);
+            if (successText != null)
+            {
+                successText.text = "Задание выполнено!\nПройдите к следующей комнате.";
+            }
             Debug.Log($"Комната {roomId} завершена!");
         }
     }
 
     public void Interact()
     {
+        Debug.Log("Interact 2");
         if (isRoomCompleted) return;
         Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
         if (Physics.Raycast(ray, out RaycastHit hit))
         {
+            Debug.Log("Ray");
             SignScript sign = hit.collider.GetComponent<SignScript>();
+            Debug.Log(sign);
             if (sign != null && !sign.isCorrect)
             {
                 string selectedItemId = inventoryUI.GetSelectedItemId();
+                Debug.Log(selectedItemId);
                 if (selectedItemId == "GreaterThan" || selectedItemId == "LessThan")
                 {
                     sign.PlaceSign(selectedItemId);
@@ -297,7 +304,6 @@ public class Room2Manager : MonoBehaviour, IRoomManager
     {
         rulesPanel?.SetActive(false);
         inventoryPanel?.SetActive(true);
-        goalPanel?.SetActive(true);
         Debug.Log("RulesPanel закрыт, InventoryPanel и GoalPanel активны");
     }
 
@@ -312,6 +318,10 @@ public class Room2Manager : MonoBehaviour, IRoomManager
                              "3. Правильный знак — зелёный, неправильный — красный.\n" +
                              "4. При ошибке числа обновятся через 2 секунды.";
             Debug.Log("RulesPanel открыт");
+        }
+        if (headerText != null)
+        {
+            headerText.text = "Сигнальный компаратор";
         }
     }
 }
